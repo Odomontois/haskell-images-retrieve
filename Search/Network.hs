@@ -12,9 +12,7 @@ extractImages:: (Searchable site) => site -> String -> IO[Image]
 extractImages site url = do
     source <- getResponseBody =<< simpleHTTP (getRequest url)  
     let siteUri = parseURI url
-        siteAuth = do 
-            uri <- siteUri
-            uriAuthority uri
+        siteAuth = siteUri >>= uriAuthority
         siteScheme = do
             uri <- siteUri
             return $ uriScheme uri

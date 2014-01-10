@@ -12,31 +12,34 @@ import System.Environment
 import Data.Maybe
 import Data.List as L
 
-readArgs args = case args of 
-    args@(cat:url:rest) -> return [cat,url]
-    [x]                 -> return ["default",x]
-    []                  -> do
-        source <- getResponseBody =<< simpleHTTP (getRequest "http://boards.4chan.org/b/")
-        let reply tag               = tag ~== "<a class=\"replylink\">"
-            tags                    = parseTags source
-            replies                 = sections reply tags
-            first                   = head $ head $ replies
-            url (TagOpen _ attrs)   = "http://boards.4chan.org/b/" ++ (snd $ fromJust $ find href attrs)
-            url tag                 = ""
-            href attr               = fst attr == "href"
-        return ["default", url first]
-main = do
-    [category, url] <- getArgs >>= readArgs 
-    images          <- extractImages FourChan url
-    content         <- getBinContent $ link $ images !! 0
+site = FourChan
+
+readArgs args = return $ case args of 
+    args@(cat:url:rest) -> (cat, Just url)
+    [x]                 -> ("default", Just x)
+    []                  -> ("default", Nothing)
+
+getImages (category,(Just url)) = do
+    images <- extractImages site url
+    return [(url, images)]
+
+getImages (category,Nothing) = extractAllImages site
+
+writeImages category (url,images) = 
     let thread           = last $ split "/" url
         directory        = category ++ "/" ++ thread  
-        writeImage image = do
+        writeImage image = 
             let fileName = directory ++ "/" ++(last $ split "/" $ name image)
                 writeFile = do
                     content <- getBinContent $ link image       
                     putStrLn ( "writing new " ++ fileName ) 
                     B.writeFile fileName content             
-            skipExistingFile fileName writeFile
-    ensureDirectory directory
-    sequence $ map writeImage images 
+            in do skipExistingFile fileName writeFile
+    in do   ensureDirectory directory
+            sequence $ map writeImage images 
+
+
+main = do
+    args <- readArgs =<< getArgs
+    images <- getImages args
+    sequence $ map ( writeImages $ fst args ) images  

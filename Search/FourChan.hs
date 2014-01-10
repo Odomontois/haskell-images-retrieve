@@ -1,16 +1,15 @@
 module Search.FourChan where
 
 import Search
-import Text.HTML.TagSoup
-import Control.Applicative
-import Data.List
-import Text.StringLike
 
 data FourChan = FourChan
 
 instance Searchable FourChan where
-    patterns FourChan = ["<a class=\"fileThumb\">"]
-    extractImgURL FourChan (TagOpen tag attributes:tags) = snd <$> find source attributes where
-        source attribute = fst  attribute == href
-        href = fromString "href"
-    extractImgURL FourChan othertags = Nothing
+    patterns        FourChan = ["<a class=\"fileThumb\">"]
+    extractImgURL   FourChan = extractAttr "href"
+instance TitlePage FourChan where
+    titlePageURL    FourChan = "http://boards.4chan.org/b/"
+    pagePatterns    FourChan = ["<a class=\"replylink\">"]
+    extractPageURL  FourChan = extractAttr "href"
+
+

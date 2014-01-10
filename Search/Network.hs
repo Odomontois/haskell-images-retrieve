@@ -8,7 +8,7 @@ import Data.Maybe
 
 data Image = Image{link::String, name::String} deriving (Show, Eq, Ord, Read)
 
-extractImages:: (Searchable site) => site -> String -> IO[Image]
+extractImages:: (Searchable site)=>site->String->IO[Image]
 extractImages site url = do
     source <- getResponseBody =<< simpleHTTP (getRequest url)  
     let siteUri = parseURI url
@@ -26,3 +26,18 @@ extractImages site url = do
             return $ Image link name
             
     return $ catMaybes $ map parseImage $ extractImageURLs site source
+
+extractPages::(TitlePage site)=>site->IO[String]
+extractPages site = let 
+    title = titlePageURL site
+    in do
+        source <- getResponseBody =<< simpleHTTP (getRequest title)
+        return $ map (title ++) $ extractPageURLs site source
+
+extractAllImages::(TitlePage site)=>site->IO[(String,[Image])]
+extractAllImages site = do
+    pages <- extractPages site
+    let extract page = do
+        images <- extractImages site page
+        return(page,images)
+    sequence $ map extract pages
